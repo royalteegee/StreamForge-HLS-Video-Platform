@@ -110,7 +110,7 @@ Compress-Archive -Path ffmpeg-layer\bin -DestinationPath ffmpeg-layer.zip
 3. Click **Create**
 4. Copy the **Layer ARN** shown on the confirmation page — you will need it in the next step
 
-> The ARN looks like: `arn:aws:lambda:eu-central-1:992382803030:layer:ffmpeg:1`
+> The ARN looks like: `arn:aws:lambda:eu-central-1:1234567890:layer:ffmpeg:1`
 
 ---
 
