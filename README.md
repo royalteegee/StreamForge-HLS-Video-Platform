@@ -441,7 +441,7 @@ Once your frontend is deployed, update the raw bucket CORS rule `AllowedOrigins`
 6. Replace `<password>` and set database name to `streamforge`:
 
 ```
-mongodb+srv://myuser:mypassword@cluster0.abc123.mongodb.net/streamforge
+mongodb+srv://myuser:mypassword@cluster0.abc123.mongodb.net/<db_name>
 ```
 
 7. Paste this as `MONGO_URI` in your backend `.env`
