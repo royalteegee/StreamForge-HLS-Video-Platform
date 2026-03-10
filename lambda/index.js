@@ -135,7 +135,6 @@ async function uploadHLSFiles(outputDir, files, videoId) {
         Body: fs.createReadStream(filePath),
         ContentType: isPlaylist ? "application/x-mpegURL" : "video/MP2T",
         // Make files publicly readable
-        ACL: "public-read",
         CacheControl: isPlaylist ? "no-cache" : "max-age=31536000",
       })
     );
