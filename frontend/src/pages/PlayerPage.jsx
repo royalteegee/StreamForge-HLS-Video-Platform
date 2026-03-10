@@ -11,7 +11,6 @@ export default function PlayerPage({ video, onBack }) {
     if (!videoEl || !video.playlistUrl) return;
 
     const setup = async () => {
-      // Dynamically load HLS.js
       if (window.Hls) {
         initHls(videoEl, window.Hls);
       } else {
@@ -43,12 +42,9 @@ export default function PlayerPage({ video, onBack }) {
         videoEl.play().catch(() => {});
       });
       hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          setPlayerError("Playback error: " + data.type);
-        }
+        if (data.fatal) setPlayerError("Playback error: " + data.type);
       });
     } else if (videoEl.canPlayType("application/vnd.apple.mpegurl")) {
-      // Safari native HLS
       videoEl.src = video.playlistUrl;
       videoEl.addEventListener("loadedmetadata", () => {
         setPlayerReady(true);
@@ -62,11 +58,10 @@ export default function PlayerPage({ video, onBack }) {
   return (
     <div className="player-page">
       <div className="player-back">
-        <button className="btn-ghost" onClick={onBack}>
-          ← Back to Library
-        </button>
+        <button className="btn-ghost" onClick={onBack}>← Back to Library</button>
       </div>
 
+      {/* Constrain video to viewport — never taller than 60vh */}
       <div className="player-wrapper">
         {playerError ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 12, color: "var(--error)" }}>

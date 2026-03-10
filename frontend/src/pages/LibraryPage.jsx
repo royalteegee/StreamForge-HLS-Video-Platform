@@ -18,7 +18,6 @@ export default function LibraryPage({ onWatch }) {
 
   useEffect(() => {
     fetchVideos();
-    // Poll every 10s to catch videos finishing processing
     const interval = setInterval(fetchVideos, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -37,11 +36,7 @@ export default function LibraryPage({ onWatch }) {
             {videos.length > 0 ? `${videos.length} video${videos.length !== 1 ? "s" : ""}` : "No videos yet"}
           </div>
         </div>
-        <button
-          className="btn-ghost"
-          onClick={fetchVideos}
-          style={{ fontSize: "12px", gap: "6px" }}
-        >
+        <button className="btn-ghost" onClick={fetchVideos} style={{ fontSize: "12px" }}>
           ↻ Refresh
         </button>
       </div>
@@ -86,6 +81,7 @@ function VideoCard({ video, onClick, formatDate }) {
   const isReady = video.status === "ready";
   const isProcessing = video.status === "processing";
   const isFailed = video.status === "failed";
+  const [imgError, setImgError] = useState(false);
 
   return (
     <div
@@ -94,20 +90,56 @@ function VideoCard({ video, onClick, formatDate }) {
       style={{ cursor: isReady ? "pointer" : "default" }}
     >
       <div className="video-thumb">
+
+        {/* Thumbnail image — shown when ready and URL exists */}
+        {isReady && video.thumbnailUrl && !imgError && (
+          <img
+            src={video.thumbnailUrl}
+            alt={video.title}
+            onError={() => setImgError(true)}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        )}
+
+        {/* Dark overlay on hover so play button is visible over thumbnail */}
+        {isReady && (
+          <div
+            className="thumb-overlay"
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(0,0,0,0.3)",
+              opacity: 0,
+              transition: "opacity 0.2s",
+            }}
+          />
+        )}
+
+        {/* Processing spinner */}
         {isProcessing && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
             <div className="spinner" />
             <span style={{ fontSize: "11px", color: "var(--warning)", letterSpacing: "0.06em" }}>CONVERTING</span>
           </div>
         )}
+
+        {/* Failed state */}
         {isFailed && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
             <span style={{ fontSize: "28px" }}>⚠</span>
             <span style={{ fontSize: "11px", color: "var(--error)", letterSpacing: "0.06em" }}>FAILED</span>
           </div>
         )}
+
+        {/* Play button */}
         {isReady && (
-          <div className="thumb-play">▶</div>
+          <div className="thumb-play" style={{ position: "relative", zIndex: 2 }}>▶</div>
         )}
       </div>
 

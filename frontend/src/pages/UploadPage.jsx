@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { uploadVideo } from "../utils/api";
+import { uploadVideo, formatSpeed, formatTimeRemaining } from "../utils/api";
 
 const STEPS = [
   { key: "presign", label: "Requesting upload URL" },
@@ -15,6 +15,7 @@ export default function UploadPage({ onDone }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(null);
+  const [speedInfo, setSpeedInfo] = useState(null); // { speed, remaining }
   const [error, setError] = useState(null);
   const [done, setDone] = useState(false);
   const fileRef = useRef();
@@ -46,6 +47,7 @@ export default function UploadPage({ onDone }) {
     setUploading(true);
     setError(null);
     setProgress(0);
+    setSpeedInfo(null);
 
     try {
       await uploadVideo({
@@ -53,6 +55,7 @@ export default function UploadPage({ onDone }) {
         title: title.trim(),
         onStep: setCurrentStep,
         onProgress: setProgress,
+        onSpeed: setSpeedInfo,
       });
       setDone(true);
     } catch (err) {
@@ -61,11 +64,6 @@ export default function UploadPage({ onDone }) {
       setUploading(false);
     }
   };
-
-  const completedSteps = STEPS.slice(
-    0,
-    STEPS.findIndex((s) => s.key === currentStep) + (done ? 10 : 0)
-  );
 
   const isStepDone = (key) => {
     if (done) return true;
@@ -81,45 +79,14 @@ export default function UploadPage({ onDone }) {
           <div className="page-title">Upload Complete 🎉</div>
           <div className="page-subtitle">Your video has been converted and is ready to stream.</div>
         </div>
-        <div
-          style={{
-            padding: "32px",
-            background: "var(--surface)",
-            border: "1px solid var(--success)",
-            borderRadius: "var(--radius)",
-            marginBottom: "24px",
-          }}
-        >
+        <div style={{ padding: "32px", background: "var(--surface)", border: "1px solid var(--success)", borderRadius: "var(--radius)", marginBottom: "24px" }}>
           <div style={{ fontSize: "36px", marginBottom: "12px" }}>✅</div>
-          <div
-            style={{
-              fontFamily: "Syne, sans-serif",
-              fontWeight: 700,
-              fontSize: "18px",
-              color: "var(--success)",
-              marginBottom: "8px",
-            }}
-          >
-            {title}
-          </div>
-          <div style={{ fontSize: "13px", color: "var(--text2)" }}>
-            HLS conversion complete — video is in your library.
-          </div>
+          <div style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: "18px", color: "var(--success)", marginBottom: "8px" }}>{title}</div>
+          <div style={{ fontSize: "13px", color: "var(--text2)" }}>HLS conversion complete — video is in your library.</div>
         </div>
         <div style={{ display: "flex", gap: "12px" }}>
-          <button className="btn-primary" onClick={onDone}>
-            Go to Library →
-          </button>
-          <button
-            className="btn-ghost"
-            onClick={() => {
-              setFile(null);
-              setTitle("");
-              setDone(false);
-              setCurrentStep(null);
-              setProgress(0);
-            }}
-          >
+          <button className="btn-primary" onClick={onDone}>Go to Library →</button>
+          <button className="btn-ghost" onClick={() => { setFile(null); setTitle(""); setDone(false); setCurrentStep(null); setProgress(0); setSpeedInfo(null); }}>
             Upload Another
           </button>
         </div>
@@ -143,24 +110,13 @@ export default function UploadPage({ onDone }) {
             onDrop={handleDrop}
             onClick={() => !file && fileRef.current?.click()}
           >
-            <input
-              ref={fileRef}
-              type="file"
-              accept="video/mp4,video/*"
-              onChange={(e) => handleFile(e.target.files[0])}
-              style={{ display: "none" }}
-            />
+            <input ref={fileRef} type="file" accept="video/mp4,video/*" onChange={(e) => handleFile(e.target.files[0])} style={{ display: "none" }} />
             {file ? (
               <div className="selected-file" style={{ justifyContent: "center", background: "transparent", border: "none" }}>
                 <span>🎬</span>
                 <span className="file-name">{file.name}</span>
                 <span className="file-size">{formatSize(file.size)}</span>
-                <button
-                  style={{ background: "none", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: "16px" }}
-                  onClick={(e) => { e.stopPropagation(); setFile(null); setTitle(""); }}
-                >
-                  ✕
-                </button>
+                <button style={{ background: "none", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: "16px" }} onClick={(e) => { e.stopPropagation(); setFile(null); setTitle(""); }}>✕</button>
               </div>
             ) : (
               <>
@@ -175,12 +131,7 @@ export default function UploadPage({ onDone }) {
             <div className="upload-form">
               <div className="field">
                 <label>Video Title</label>
-                <input
-                  type="text"
-                  placeholder="Enter a title..."
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
+                <input type="text" placeholder="Enter a title..." value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
 
               {error && (
@@ -189,11 +140,14 @@ export default function UploadPage({ onDone }) {
                 </div>
               )}
 
-              <button
-                className="btn-primary"
-                disabled={!title.trim()}
-                onClick={handleSubmit}
-              >
+              {/* Warn user if file is large */}
+              {file.size > 50 * 1024 * 1024 && (
+                <div style={{ padding: "10px 14px", background: "rgba(255,193,71,0.06)", border: "1px solid rgba(255,193,71,0.2)", borderRadius: "var(--radius-sm)", fontSize: "12px", color: "var(--warning)" }}>
+                  ⚡ Large file ({formatSize(file.size)}) — will use multipart upload with 5 parallel chunks.
+                </div>
+              )}
+
+              <button className="btn-primary" disabled={!title.trim()} onClick={handleSubmit}>
                 Start Upload & Convert →
               </button>
             </div>
@@ -201,9 +155,10 @@ export default function UploadPage({ onDone }) {
         </>
       ) : (
         <div className="upload-progress">
+          {/* Progress bar */}
           <div className="progress-label">
             <span className="step">
-              {currentStep === "processing" ? "Lambda converting..." : "Uploading to S3..."}
+              {currentStep === "processing" ? "Lambda converting..." : currentStep === "upload" ? "Uploading to S3..." : "Preparing..."}
             </span>
             <span>{progress}%</span>
           </div>
@@ -211,14 +166,23 @@ export default function UploadPage({ onDone }) {
             <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
           </div>
 
+          {/* Speed + time remaining — only shown during upload step */}
+          {currentStep === "upload" && speedInfo && (
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px", fontSize: "12px", color: "var(--text2)" }}>
+              <span>⚡ {formatSpeed(speedInfo.speed)}</span>
+              <span>{formatTimeRemaining(speedInfo.remaining)}</span>
+            </div>
+          )}
+
+          {/* Step indicators */}
           <div className="upload-steps" style={{ marginTop: "20px" }}>
             {STEPS.map((step) => {
-              const done_ = isStepDone(step.key);
+              const stepDone = isStepDone(step.key);
               const active = currentStep === step.key;
               return (
-                <div key={step.key} className={`upload-step ${done_ ? "done" : ""} ${active ? "active" : ""}`}>
+                <div key={step.key} className={`upload-step ${stepDone ? "done" : ""} ${active ? "active" : ""}`}>
                   <span className="step-icon">
-                    {done_ ? "✓" : active ? <span className="spinner" style={{ width: 14, height: 14, borderWidth: 1.5 }} /> : "○"}
+                    {stepDone ? "✓" : active ? <span className="spinner" style={{ width: 14, height: 14, borderWidth: 1.5 }} /> : "○"}
                   </span>
                   {step.label}
                 </div>
